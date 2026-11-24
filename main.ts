@@ -125,7 +125,17 @@ for (const name of shots) {
 // The dossier is written last: the scorer rebuilds it from this /output and compares bytes.
 writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEXT_MAX_BYTES, screenshots: SCREENSHOT_CAPS, dashboard: { max_files: 400, max_bytes: 4_194_304 } }));
 
+const valueEvidence = radar.evidence.value;
+const oddsEvidence = radar.evidence.odds;
+const rangeHonesty = radar.evidence.range;
+const valueKept = valueEvidence.find((r) => r.status === 'kept' && r.term.startsWith('+ category'))!;
+const valueSize = valueEvidence.find((r) => r.term.startsWith('+ size'))!;
 process.stdout.write(
   `token radar: ${snapshot.protocols.length} protocols in the snapshot, ${snapshot.watchlist.length} on the watchlist, ${board.length} rows scored (${radar.early_size} early, ${radar.live_size} live set aside)\n` +
+    `token radar: model ${radar.model_version}: value if it launches = size curve x category offset; token odds from the peers' record\n` +
+    `token radar: held-out value miss — size curve ${valueSize.loo_miss.toFixed(2)}x LOO / ${valueSize.walk_forward_miss.toFixed(2)}x walk-forward; with category ${valueKept.loo_miss.toFixed(2)}x LOO / ${valueKept.walk_forward_miss.toFixed(2)}x walk-forward\n` +
+    `token radar: held-out token odds — Brier ${oddsEvidence[oddsEvidence.length - 1]!.loo_brier.toFixed(3)} LOO / ${oddsEvidence[oddsEvidence.length - 1]!.walk_forward_brier.toFixed(3)} walk-forward (base rate ${oddsEvidence[0]!.loo_brier.toFixed(3)} / ${oddsEvidence[0]!.walk_forward_brier.toFixed(3)})\n` +
+    `token radar: ranges held-out — P25-P75 caught ${(rangeHonesty.loo_inside_p25_p75 * 100).toFixed(0)}% LOO / ${(rangeHonesty.wf_inside_p25_p75 * 100).toFixed(0)}% walk-forward of real caps (stated 50%), P10-P90 ${(rangeHonesty.loo_inside_p10_p90 * 100).toFixed(0)}% / ${(rangeHonesty.wf_inside_p10_p90 * 100).toFixed(0)}% (stated 80%)\n` +
+    `token radar: farm verdicts ${radar.verdict_counts.farm} FARM / ${radar.verdict_counts.marginal} MARGINAL / ${radar.verdict_counts.skip} SKIP; implied value $${board.reduce((s, r) => s + r.implied_value_usd, 0).toLocaleString('en-US')}\n` +
     `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (${dashFiles.length} files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
 );
